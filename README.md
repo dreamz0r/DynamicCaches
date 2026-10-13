@@ -1,4 +1,4 @@
-# Dynamic Caches 2.3.0 — Configuration reference
+# Dynamic Caches 3.2.0 — Configuration reference
 
 Author: Griffin.
 
@@ -7,7 +7,7 @@ Dynamic Caches places locked loot containers at saved points inside buildings. T
 | Section | Use it to configure |
 | --- | --- |
 | [Settings.json](#settingsjson) | Administrators, key drops, cache appearance, map-wide limits, locks, action durations and tool damage. |
-| [Caches.json](#cachesjson) | Building classes, local positions/orientations, point chances and combined per-building limits. |
+| [Caches.json](#cachesjson) | Building classes, local positions/orientations, per-point sizes/chances and combined per-building limits. |
 | [Loot.json](#lootjson) | Reusable item sets, independent set/item rolls, counts, quantities, health, attachments and key identity. |
 | [Advanced examples](#advanced-configuration-examples) | Custom categories, paired/tools-only/class-based locks, mixed building categories, layered loot and key progression. |
 | [Administrator commands](#administrator-commands) | Record, inspect, delete, clear and undo saved positions. |
@@ -15,7 +15,7 @@ Dynamic Caches places locked loot containers at saved points inside buildings. T
 
 ## Configuration files and loading
 
-The server uses `$profile:DynamicCaches`, under the profile directory chosen for your server. All three active files use `"Version": 1`. Use valid JSON: double-quoted strings, numeric values without quotes, true/false booleans, and no comments or trailing commas. The snippets in this guide identify the file and array/object to edit; fragments are not complete replacement files.
+The server uses `$profile:DynamicCaches`, under the profile directory chosen for your server. Settings.json uses `"Version": 2`; Caches.json and Loot.json use `"Version": 1`. Existing Version 1 Settings files are migrated on startup. Use valid JSON: double-quoted strings, numeric values without quotes, true/false booleans, and no comments or trailing commas. The snippets in this guide identify the file and array/object to edit; fragments are not complete replacement files.
 
 Missing Settings.json, Caches.json and Loot.json are created during server initialization, before the map scan or any administrator command. Existing valid files are retained. Fresh Settings/Loot include civilian, construction, firestation, hospital, military and police. Fresh Caches.json has no buildings or positions:
 
@@ -26,7 +26,7 @@ Missing Settings.json, Caches.json and Loot.json are created during server initi
 }
 ```
 
-Stop the server before manual JSON edits, then restart to load them. Chat position edits save immediately through a verified temporary file and Caches.json.bak. Existing gameplay caches keep their loot until restart; changed positions are used by the next inspection scan and normal spawning after restart. Invalid JSON, unknown referenced IDs, invalid classes or out-of-range settings prevent configuration loading/spawning; the server log identifies the problem.
+Stop the server before manual JSON edits, then restart to load them. Chat position edits save immediately through a verified temporary file and Caches.json.bak. Successful additions attempt an immediate temporary placement ghost; deleting, clearing or undoing refreshes affected authoring ghosts. Existing gameplay caches keep their loot until restart; changed positions are used by the next inspection scan and normal spawning after restart. Invalid JSON, unknown referenced IDs, invalid classes or out-of-range settings prevent configuration loading/spawning; the server log identifies the problem.
 
 Definitions link across files as follows:
 
@@ -38,7 +38,7 @@ Definitions link across files as follows:
 
 Every Settings category needs exactly one Loot.Caches entry; Sets may be empty. A category can exist without any building points, but it cannot spawn until points are saved for it. Adding a point creates the placement category under a building class; it does not create the Settings/Loot definitions.
 
-If a valid older Config.json exists, it supplies data for missing files and remains untouched. Otherwise missing files use bundled defaults. Existing active files are preserved except for the supported old category-name migration: medical_cache becomes hospital, firefighter_cache becomes firestation, and the other stock _cache IDs lose that suffix. Migration saves backups and retains recorded points, settings, keys and loot; old empty stock building placeholders are removed. Conflicting category IDs prevent saving migration. Key IDs such as medical_key and loot-set IDs such as medical_supplies retain their existing names.
+If a valid older Config.json exists, it supplies data for missing files and remains untouched. Otherwise missing files use bundled defaults. Supported startup migrations update old appearance settings and category names: medical_cache becomes hospital, firefighter_cache becomes firestation, and the other stock _cache IDs lose that suffix. Migration saves backups and retains recorded points, settings, keys and loot; old empty stock building placeholders are removed. Conflicting category IDs prevent saving migration. Key IDs such as medical_key and loot-set IDs such as medical_supplies retain their existing names. Settings Version 1 becomes Version 2; `ModelSize: "wide"` becomes `"long"` and `Theme: "firefighter"` becomes `"firestation"`. The obsolete ModelVariant setting is ignored and removed from the migrated Settings file. Its former steel/wood choices now use the same new polymer family. Explicit small sizes stay small; blank sizes use the new automatic category defaults. Migration preserves AdminSteamIDs, keys, locks, loot, limits and saved positions, and writes .bak files before committing. Config.json remains untouched.
 
 
 ## Setting conventions
@@ -47,7 +47,7 @@ An ID identifies a definition; a display name is the text players see. Use exact
 
 Percent chances use `0` through `100`: `0` never passes and `100` always passes. Random minimum/maximum bounds are inclusive. Item counts and loot-set repetitions are integers; the maximum must be at least the minimum. Health is normalized: `1` means full health and `0.7` means 70% of maximum health. Quantity uses the item's native units, such as magazine rounds, stack count or liquid quantity.
 
-The field tables describe every active JSON setting. Where an omitted-field default is stated, it is the value used when that field is absent; generated stock entries can explicitly set a different value. Keep identity/reference fields explicit. The stock tables below show bundled values.
+The field tables describe every active JSON setting. Where an omitted-field default is stated, it is the value used when that field is absent; generated stock entries can explicitly set a different value. Keep identity/reference fields explicit. The stock tables below show bundled values. Version 3.2 adds optional per-position ModelSize without changing JSON file versions: older points without it use the category's size, while new chat additions save their concrete selected size.
 
 ## Settings.json
 
@@ -55,11 +55,11 @@ The field tables describe every active JSON setting. Where an omitted-field defa
 
 | Setting | Instructions and valid values |
 | --- | --- |
-| `Version` | Schema version. Keep `1`. |
+| `Version` | Settings schema version. Keep `2`. Version `1` is accepted for migration. Caches/Loot retain their own Version `1`. |
 | `AdminSteamIDs` | Array of up to 100 Steam64 ID strings. `[]` grants command access to nobody. |
 | `MaxKeysPerInfected` | Maximum successful mod key drops from one infected death, across key types. Integer `0`–`10`; default `1`. `0` disables infected key drops globally. Eligible key definitions are tested in random order until this limit is reached. |
 | `Keys` | Array of key definitions, up to 100. Different key IDs may share the same physical `DC_Key` class. |
-| `Caches` | Array of cache category definitions, up to 100. These IDs are used by addpos, placement categories and Loot.json. |
+| `Caches` | Array of cache category definitions, up to 100. These IDs are used by target, placement categories and Loot.json. |
 
 ### Keys[]
 
@@ -81,11 +81,28 @@ Key drops are rolled once per infected death, on the server. They are placed in 
 | --- | --- |
 | `Id` | Unique category ID, for example `hospital`. Caches.json and Loot.json must refer to this exact ID. |
 | `DisplayName` | Player-visible cache name. Also supplies the lock's CacheName. |
-| `ModelSize` | `small`, `wide`, or `""` for automatic selection. Small has 8×8 cargo; wide has 10×10. Automatic selection uses wide for firestation/police/military/construction and small for other IDs. |
-| `Theme` | Skin name: `hospital`, `firefighter`, `police`, `military`, `construction`, `civilian`, or `""` for automatic selection. The category **firestation uses Theme `firefighter`**. Automatic selection maps known IDs to their stock skin; other IDs use civilian. |
+| `ModelSize` | Category default: `large`, `medium`, `small`, `long`, or `""` for automatic selection. Hospital→small; firestation/construction→large; military→long; police/civilian/custom IDs→medium. Omitted default `""`. Used for older points with blank/missing point ModelSize and for new additions until that administrator uses setsize. Explicit per-position sizes take precedence. Size controls mesh, physical footprint and cargo grid; Theme controls the category finish. |
+| `Theme` | Color finish: `hospital`, `firestation`, `police`, `military`, `construction`, `civilian`, or `""` for automatic selection. Known category IDs use their own color; custom IDs use civilian unless explicitly set. Any of the six weathered finishes can be used on any size. Crate textures have no text, lettering, symbols or plaques. Legacy firefighter input is migrated to firestation. |
 | `Enabled` | Whether this category can spawn during normal gameplay. Default `true`. Show-all ignores this flag. |
 | `MaxActive` | Maximum normal caches of this category across the entire map. Integer `0`–`500`; omitted default `10`, stock limits below. `0` disables normal spawning. Sum of configured MaxActive values must not exceed 1000, including disabled categories. Show-all ignores this limit. |
 | `Lock` | Lock requirements, action timing and tool damage, described below. At least a usable key requirement or enabled nonempty tool list is required. |
+
+### Four polymer models and category finishes
+
+Exactly four editable meshes are supplied: **Large, Medium, Small and Long Crate**. They use smooth molded polymer shells, blended reinforcement ribs, recessed folding handles, metal latches, a rear hinge and fitted charcoal foam in the lid and body. Every lid opens rigidly from closed to a maximum of **80°**, with unchanged footprint and thickness. The rear hinge remains fixed; the model origin stays at the floor.
+
+| ModelSize | Item class | Exterior W × D × H | Foam-lined clear interior W × D × H | Lid thickness | Cargo grid |
+| --- | --- | --- | --- | --- | --- |
+| `large` | `DC_Cache_Large` | 1200 × 800 × 700 mm | 1100 × 700 × 570 mm | 80 mm | 10 × 12 (120 slots) |
+| `medium` | `DC_Cache_Medium` | 700 × 650 × 300 mm | 630 × 570 × 210 mm | 40 mm | 10 × 8 (80 slots) |
+| `small` | `DC_Cache_Small` | 400 × 350 × 150 mm | 340 × 290 × 90 mm | 25 mm | 6 × 4 (24 slots) |
+| `long` | `DC_Cache_Long` | 1800 × 450 × 180 mm | 1700 × 350 × 110 mm | 35 mm | 10 × 4 (40 slots) |
+
+The usable interior dimensions include the foam lining. DayZ fits inventory items by their configured grid dimensions, independently of the physical millimetre measurements. Large is intended for bulky tools, equipment and components; Medium for general equipment; Small for compact items; Long for rifles. Loot that cannot fit the cargo uses the mod's existing overflow behavior described under Loot.json.
+
+Each of the four sizes has six dedicated category textures and its own polymer material maps, for 24 size/finish combinations. Measured mapping follows each crate's actual surface dimensions, keeping grain and wear at the correct physical scale across the lid, front, sides, rear and bottom. Hospital uses off-white; firestation uses oxide red; police uses navy; military uses olive; construction uses worksite yellow; civilian uses muted tan. The textures contain no text, lettering, symbols, names or plaques. Polymer grain, abrasion, scuffs, accumulated grime and faded surface color give the shells a weathered post-apocalyptic finish. Geometry, hardware, foam interiors and gameplay behavior are unchanged by the texture and mapping update.
+
+Changing Theme changes the finish, without changing the model, lock or loot. ModelSize changes the physical footprint and cargo; an explicit saved point size overrides the category default. Preview every saved point after upgrading, especially near walls or under low ceilings: these dimensions replace the previous models, and collision checks can reject points that no longer fit. ModelVariant is no longer a setting; the old A/B/C polymer/steel/wood meshes are removed. Old DC_Cache_Wide and steel/wood class references remain hidden compatibility aliases to the new Small or Long mesh; DC_Cache uses Medium. Normal spawning selects only the four canonical classes.
 
 ### Caches[].Lock
 
@@ -119,12 +136,12 @@ All stock categories are enabled and accept Crowbar OR their assigned key. All u
 
 | Category ID | DisplayName | ModelSize | Theme | MaxActive | KeyId | Loot SetId |
 | --- | --- | --- | --- | --- | --- | --- |
-| `civilian` | Civilian Cache | small | civilian | 20 | civilian_key | civilian_supplies |
-| `construction` | Construction Cache | wide | construction | 12 | construction_key | construction_supplies |
-| `firestation` | Firefighter Cache | wide | firefighter | 8 | firefighter_key | firefighter_supplies |
-| `hospital` | Hospital Cache | small | hospital | 10 | medical_key | medical_supplies |
-| `military` | Military Cache | wide | military | 6 | military_key | military_supplies |
-| `police` | Police Cache | wide | police | 10 | police_key | police_supplies |
+| `civilian` | Civilian Cache | auto → medium | civilian | 20 | civilian_key | civilian_supplies |
+| `construction` | Construction Cache | auto → large | construction | 12 | construction_key | construction_supplies |
+| `firestation` | Firefighter Cache | auto → large | firestation | 8 | firefighter_key | firefighter_supplies |
+| `hospital` | Hospital Cache | auto → small | hospital | 10 | medical_key | medical_supplies |
+| `military` | Military Cache | auto → long | military | 6 | military_key | military_supplies |
+| `police` | Police Cache | auto → medium | police | 10 | police_key | police_supplies |
 
 | Key Id | DisplayName | DropChance | Eligible infected |
 | --- | --- | --- | --- |
@@ -142,7 +159,7 @@ All stock categories are enabled and accept Crowbar OR their assigned key. All u
 | Setting | Instructions and valid values |
 | --- | --- |
 | `Version` | Keep `1`. |
-| `Buildings` | Array of building definitions, up to 500. Fresh default `[]`. Normally populated by target/addpos. |
+| `Buildings` | Array of building definitions, up to 500. Fresh default `[]`. Normally populated by target/add. |
 | `Buildings[].BuildingClass` | Exact DayZ building class returned by the targeted object, for example `Land_City_Hospital`. Must inherit from `House` and be unique in Buildings. Points apply to every instance of this class. |
 | `Buildings[].Categories` | Array of category placement definitions under this class, up to 100. Target creates an empty array. Adding the first point creates a category. Only one entry per CacheId is permitted under a class. |
 
@@ -160,9 +177,10 @@ There can be at most 500 category placement definitions in total across all buil
 
 | Setting | Instructions and valid values |
 | --- | --- |
-| `Id` | Nonempty point ID, up to 64 characters and unique within this category/class. Chat saves generate/reindex slot_1, slot_2, etc. This is not the global deletion number shown by list. |
-| `Position` | Building-local vector encoded as a string, for example `"1.2 0.4 -2.5"`. Components are local X, Y (height), Z in metres, each within -100 to 100. Addpos captures the player's location relative to the selected building. Not map/world coordinates. |
-| `Orientation` | Building-local yaw, pitch, roll in degrees, encoded as a string, for example `"90 0 0"`. Each component must be within -360 to 360. Addpos captures the player's full orientation; the mod combines it with each building's rotation when spawning. Default `"0 0 0"`. |
+| `Id` | Nonempty point ID, up to 64 characters and unique within this category/class. Chat additions generate available slot_1, slot_2, etc.; deleting another point preserves surviving IDs. Duplicate IDs from merged legacy rules receive unique replacements. This is not the global deletion number shown by list. |
+| `Position` | Building-local vector encoded as a string, for example `"1.2 0.4 -2.5"`. Components are local X, Y (height), Z in metres, each within -100 to 100. Add captures the player's location relative to the selected building. Not map/world coordinates. |
+| `Orientation` | Building-local yaw, pitch, roll in degrees, encoded as a string, for example `"90 0 0"`. Each component must be within -360 to 360. Add captures the player's full orientation; the mod combines it with each building's rotation when spawning. Default `"0 0 0"`. |
+| `ModelSize` | Optional point override: `small`, `medium`, `large`, `long`, or `""`. Blank/missing uses Settings.Caches[].ModelSize, including automatic category defaults. New add commands save the resolved concrete size; subsequent setsize/retarget/default changes do not resize that point. Applies equally to normal spawning, show-all and the add ghost. Legacy wide input resolves to long. |
 | `Chance` | Normal candidate-selection chance per point per matching building, `0`–`100`; default `100`. Passing this roll does not guarantee spawning if active/building limits, occupancy or collision checks prevent it. Show-all ignores this chance. |
 
 This example shows one point; it is not inserted into fresh configurations automatically:
@@ -182,6 +200,7 @@ This example shows one point; it is not inserted into fresh configurations autom
               "Id": "slot_1",
               "Position": "1.2 0.4 -2.5",
               "Orientation": "90 0 0",
+              "ModelSize": "small",
               "Chance": 100
             }
           ]
@@ -264,17 +283,17 @@ Here is a complete item entry demonstrating random magazine quantity and fixed c
 1. Copy a category definition in Settings.Caches and give it a new lower-case single-word Id and DisplayName. Select ModelSize, Theme, limits and lock behavior.
 2. Reuse an existing KeyId, or add a matching definition to Settings.Keys. For tools-only opening, clear both KeyId and KeyClass and keep AllowTools=true with a nonempty ToolClasses array.
 3. Add one Loot.Caches entry with CacheId matching the new category. Reuse existing SetIds, or add ItemSets with new unique IDs and item entries. An empty Sets array is valid for an intentionally empty cache.
-4. Restart to load the definitions. Target a building and use `!dc addpos <newid>`; the first point creates that category under the targeted class. Run list/show-all to inspect, and hide-all before further edits.
+4. Restart to load the definitions. Use `!dc target <newid>` on a building, optionally select a size with setsize, then use `!dc add`; the first point creates that category under the targeted class. Run list/show-all to inspect, and hide-all before further edits during explicit show-all inspection.
 
 Renaming a category requires updating Settings.Caches.Id, every matching Caches.Buildings[].Categories[].CacheId, and Loot.Caches[].CacheId. Renaming a loot set requires updating ItemSets.Id and every SetId reference. Renaming a key requires updating the key definition and all Lock.KeyId/loot-item KeyId references; already-distributed keys still carry their old ID, so preserving key IDs is preferable.
 
 ## Advanced configuration examples
 
-Apply the examples independently unless an example explicitly refers to another. Keep existing entries and unique IDs: append new definitions, replace the stated existing entry/object, and avoid duplicate category assignments. All examples use Version 1 file schemas and existing vanilla/mod classes. Omitted fields use the defaults in the reference tables.
+Apply the examples independently unless an example explicitly refers to another. Keep existing entries and unique IDs: append new definitions, replace the stated existing entry/object, and avoid duplicate category assignments. Settings examples use Version 2; Caches/Loot examples use Version 1. All examples use existing vanilla/mod classes. Omitted fields use the defaults in the reference tables.
 
 ### 1. A custom category with a rare infected key
 
-Add the key below to **Settings.json → Keys**, and the category below to **Settings.json → Caches**. The wrapper shows the two destination arrays; merge their entries into your existing file. The new armory category has a wide military skin and at most three normal caches across the map. Its key drops only from military infected and their descendants, with a 2% chance when that definition is tested. Ordinary tools cannot open it.
+Add the key below to **Settings.json → Keys**, and the category below to **Settings.json → Caches**. The wrapper shows the two destination arrays; merge their entries into your existing file. The new armory category uses the Long Crate with a military finish and at most three normal caches across the map. Its key drops only from military infected and their descendants, with a 2% chance when that definition is tested. Ordinary tools cannot open it.
 
 ```json
 {
@@ -293,7 +312,7 @@ Add the key below to **Settings.json → Keys**, and the category below to **Set
     {
       "Id": "armory",
       "DisplayName": "Armory Cache",
-      "ModelSize": "wide",
+      "ModelSize": "long",
       "Theme": "military",
       "Enabled": true,
       "MaxActive": 3,
@@ -324,7 +343,7 @@ Append this assignment to **Loot.json → Caches**. It reuses the bundled milita
 }
 ```
 
-Restart, use `!dc target` on a building, then `!dc addpos armory`. Without saved points, MaxActive=3 is only a cap and produces no caches. Use the explicit Theme: an unfamiliar category ID otherwise selects the civilian skin automatically.
+Restart, use `!dc target armory` on a building, then `!dc add`. Without saved points, MaxActive=3 is only a cap and produces no caches. Use the explicit Theme: an unfamiliar category ID otherwise selects the civilian skin automatically.
 
 The global MaxKeysPerInfected still applies. With a cap of 1, a successful earlier eligible key drop can prevent the armory roll from being attempted; 2% is not a guaranteed overall rate. To allow up to two successful keys on one infected, set **Settings.json → MaxKeysPerInfected** to 2. To make this key eligible on every infected, set AllInfected=true and InfectedClasses=[]; to stop only this key's infected drops, set DropEnabled=false. MaxKeysPerInfected=0 stops all infected key drops while keys in loot continue to work.
 
@@ -400,15 +419,15 @@ This is **one entry in Caches.json → Buildings**, using the existing hospital 
       "CacheId": "hospital",
       "MaxPerBuilding": 2,
       "Positions": [
-        { "Id": "slot_1", "Position": "1.2 0.4 -2.5", "Orientation": "90 0 0", "Chance": 100 },
-        { "Id": "slot_2", "Position": "-1.5 0.4 2.0", "Orientation": "180 0 0", "Chance": 35 }
+        { "Id": "slot_1", "Position": "1.2 0.4 -2.5", "Orientation": "90 0 0", "ModelSize": "small", "Chance": 100 },
+        { "Id": "slot_2", "Position": "-1.5 0.4 2.0", "Orientation": "180 0 0", "ModelSize": "medium", "Chance": 35 }
       ]
     },
     {
       "CacheId": "police",
       "MaxPerBuilding": 2,
       "Positions": [
-        { "Id": "slot_1", "Position": "2.0 0.4 1.0", "Orientation": "0 0 0", "Chance": 50 }
+        { "Id": "slot_1", "Position": "2.0 0.4 1.0", "Orientation": "0 0 0", "ModelSize": "long", "Chance": 50 }
       ]
     }
   ]
@@ -417,7 +436,7 @@ This is **one entry in Caches.json → Buildings**, using the existing hospital 
 
 Each physical hospital can receive at most **two caches total**, not two per category. Reducing either applicable category's MaxPerBuilding to 1 reduces the combined cap to 1. Rules for disabled categories or categories with MaxActive=0 do not participate in the normal scan. An enabled rule can still constrain the building even if its Positions array is empty or none of its chances pass.
 
-The three point chances are independent candidate rolls for each building instance. Passing a roll does not reserve a cache: accepted candidates are shuffled, then map-wide MaxActive, the combined building cap, existing occupancy and collision checks apply. A Chance=100 point can therefore remain empty. MaxActive counts caches across the map, including opened ones; opening does not free a slot for a replacement that session. There is no timed refill or periodic chance reroll.
+The three point chances are independent candidate rolls for each building instance. This example also mixes Small and Medium hospital crates with a Long police crate under one building class; each retains its category's color/lock/loot. Omit a point's ModelSize or set it to blank to follow the category default instead. Passing a roll does not reserve a cache: accepted candidates are shuffled, then map-wide MaxActive, the combined building cap, existing occupancy and collision checks apply. A Chance=100 point can therefore remain empty. MaxActive counts caches across the map, including opened ones; opening does not free a slot for a replacement that session. There is no timed refill or periodic chance reroll.
 
 Show-all ignores the random chances, Enabled and both count limits, but still skips points that fail floor/clearance checks. It creates temporary non-lootable previews; hide-all returns to normal gameplay.
 
@@ -543,30 +562,35 @@ Manual changes take effect after restart; they do not remove already spawned cac
 
 ## Administrator commands
 
-Enter commands in ordinary chat. The server checks `AdminSteamIDs` against the authenticated sender. Commands and replies are private to the issuing administrator; spawned inspection caches are visible to nearby players.
+Enter commands in ordinary chat. The server checks `AdminSteamIDs` against the authenticated sender. Commands and replies are private to the issuing administrator; spawned ghosts and inspection caches are visible to nearby players.
 
 | Command | Instructions |
 | --- | --- |
-| `!dc target` | Look at a building within 100m. Select it as your reference and save its class if absent, with no categories or positions added. |
-| `!dc addpos <category>` | Stand where the cache should rest and face its intended direction. Create that category under the selected class if absent, or append to its existing points. Example: `!dc addpos hospital`. The category must already be defined in Settings/Loot. |
-| `!dc list` | List all building classes, categories and positions privately, with local position/orientation/chance and one-based global numbers. Buildings/categories are alphabetically grouped. |
+| `!dc target <category>` | Look at a building within 100m. Select it and an existing Settings/Loot category for future additions; for example `!dc target hospital`. Save its class if absent, with no categories or positions added. The selection stays until a successful retarget or reconnect. |
+| `!dc setsize <small\|medium\|large\|long>` | Select the size for future add commands. The choice persists across retarget/category changes and hide-all, until another setsize or reconnect. Existing points keep their saved size. Before the first setsize, additions use the selected category's Settings default. |
+| `!dc add` | No arguments. Stand where the cache should rest and face its intended direction. Save a point under the selected building/category with the effective concrete size, then attempt an immediate temporary ghost using that model/category color. Create the placement category if absent, or append to it. Repeated adds work while authoring ghosts are visible. |
+| `!dc list` | List all building classes, categories and positions privately, with effective per-point size, local position/orientation/chance and one-based global numbers. Buildings/categories are alphabetically grouped. |
 | `!dc delpos <number>` | Delete a point using the number from your latest list. Example: `!dc delpos 3`. Any successful edit by any administrator invalidates old list numbers; run list again. |
 | `!dc clear all` | Clear all saved points across every category under your targeted building class. Stay within 100m of the target. Retain the class and its categories. This affects every building of that class. |
 | `!dc undo` | Reverse the latest successful add, deletion or clear. Repeat to continue backwards. History is shared among administrators until server restart, and undo does not depend on your current target. Failed edits and empty clears do not add history; failed undo does not consume history. Targeting/read-only commands do not add history. |
-| `!dc show all` | Scan all matching buildings and show configured points, bypassing Enabled, Chance and normal active/building limits. Physical floor/clearance checks still apply. Blocked points are skipped, counted in the reply and identified in the server log. |
-| `!dc hide all` | Cancel a pending inspection and remove temporary preview caches. Normal caches retain their loot and unlocked state. |
+| `!dc show all` | Remove authoring ghosts, then scan all matching buildings and show saved points with their individual sizes and normal finishes, bypassing Enabled, Chance and normal active/building limits. Physical floor/clearance checks still apply. Blocked points are skipped, counted in the reply and identified in the server log. |
+| `!dc hide all` | Cancel a pending inspection and remove all temporary authoring ghosts/inspection caches. Retain your selected building/category/size; normal caches retain their loot and unlocked state. |
 | `!dc help` | Show command syntax only. |
 | `!dc categories` | Show configured category IDs only. |
 
-Each command runs only its own handler. Commands are case insensitive and accept only the argument counts shown. Unknown commands, bare `!dc`, missing arguments and extra arguments return `Command does not exist.` Valid commands with invalid category/position/target values return the relevant error. Use lower-case, single-word category IDs so they can be entered in chat.
+Each of the eleven commands runs only its own handler. Commands are case insensitive and accept only the argument counts shown. Unknown commands, bare `!dc`, missing arguments, extra arguments, retired addpos syntax, bare target and invalid setsize values return `Command does not exist.` Valid commands with invalid category/position/target values return the relevant error. Use lower-case, single-word category IDs so they can be entered in chat.
 
-Position edits and undo require a living administrator and completed scanning, with inspection hidden. Use `!dc hide all` before editing. Target selection and numbered lists are separate for each administrator and reset on reconnect; undo history stays with the running server. After undo, run `!dc list` again before deleting by number.
+Position edits and undo require a living administrator and completed scanning. Explicit show-all inspection blocks edits until hide-all; immediate add ghosts do not block edits. Building/category/size selection and numbered lists are separate for each administrator and reset on reconnect; undo history stays with the running server. Hide-all preserves your authoring selection. After undo, run `!dc list` again before deleting by number.
 
-Example workflow: target a hospital, stand at the desired point, run `!dc addpos hospital`, and repeat at further points. Inspect with `!dc list` and `!dc show all`. Hide previews before adding/deleting/clearing/undoing. Temporary caches are named `Preview: <cache name>` and cannot be opened or looted. An existing gameplay cache at the same category/point represents that point without another preview.
+Example workflow: look at a hospital and run `!dc target hospital`. Stand at each desired point, face its intended direction and run `!dc add` repeatedly. Use `!dc setsize medium` before adding a larger hospital case, then `!dc target police` to keep that selected Medium size for police points. List points with `!dc list`; inspect every matching building with `!dc show all`, and use `!dc hide all` to resume editing.
+
+Authoring ghosts use the selected model with a category-colored shell intended to look translucent. They have no loot, cargo access, interaction, pickup or solid collision, and do not consume gameplay active limits. Floor and clearance checks run on the solid model before ghost conversion. A failed file save produces no new ghost or undo entry. If the point saves but its model cannot be placed, a private message explains that the saved point remains and no incorrect ghost is shown; delete or undo that point if unsuitable. Live DayZ transparency/network appearance still requires verification.
+
+Temporary objects are shared server objects. Retargeting or disconnecting does not remove existing authoring ghosts; any authorized administrator can hide them. Hide-all, the next show-all transition or server shutdown removes them and clears their tracking ledger. Deleting, clearing or undoing refreshes only points that actually had a shown authoring ghost in this session, including another administrator's ghosts in that building class. Old saved points are not revealed by those commands. Dormant ledger entries allow undo to restore previously shown ghosts, with complete point identity checked to avoid confusing reused IDs. Other classes and normal gameplay caches retain their state and loot. Show-all previews are named `Preview: <cache name>` and cannot be opened or looted. An existing gameplay cache at the same category, size and saved anchor represents that point without another inspection preview.
 
 ## Installation
 
-1. Compile the source with addon prefix DynamicCaches. Include config.cpp, scripts, assets and mod metadata. Enable model binarization and keep assets/models/model.cfg beside both editable model sources; their Geometry autocenter=0 preserves the bottom origin.
+1. Compile the source with addon prefix DynamicCaches. Include config.cpp, scripts, assets and mod metadata. Enable model binarization and keep assets/models/model.cfg beside all four editable model sources; their Geometry autocenter=0 preserves the bottom origin.
 2. Install matching copies on server and clients. Load Community Framework and Dynamic Caches with `-mod=@CF;@DynamicCaches`. VPP and mission init.c changes are not required.
 3. Start once to create missing profile configuration files. Stop, add your account's 17-digit Steam64 ID string to Settings.AdminSteamIDs, then restart. Replace this example with your own ID; an empty array authorizes nobody:
 
@@ -576,7 +600,7 @@ Example workflow: target a hospital, stand at the desired point, run `!dc addpos
 }
 ```
 
-4. Record positions with target/addpos and inspect them with show-all. All three profile files are separate from this README in the mod root.
+4. Record positions with target/category, setsize and add; inspect them with show-all. All three profile files are separate from this README in the mod root.
 
 
 ## Troubleshooting
@@ -588,6 +612,7 @@ Example workflow: target a hospital, stand at the desired point, run `!dc addpos
 | Category does not exist | Exact lower-case category ID in Settings.Caches, matching Loot.Caches entry, and restart after manual definition edits. Category names and skin names are different settings. |
 | No normal caches | Fresh Caches.json is empty. Add positions; check Enabled, MaxActive, Chance, combined MaxPerBuilding, occupied points, collision rejection and configuration errors in the log. |
 | Some show-all points are missing | Check its blocked-placement count and the logged building/category/slot. Correct the saved location or select a model that fits. |
+| Point saved but no add ghost | The private reply identifies model creation or floor/clearance failure. The saved point remains; delete/undo it or record a suitable location/size. |
 | Key does not work | Non-ruined key; matching assigned logical KeyId, or exact KeyClass when no logical ID is required. Check both carried requirements if RequireKeyAndTool=true. |
 | Less loot than expected | Set Chance, repetitions, item Chance/counts, valid classes, quantity capacity and cargo space. Skipped item/attachment attempts are logged. |
 | Cannot delete a number | Run list again after any edit/undo or reconnect. Numbers are global within that administrator's latest list, not point IDs. |
